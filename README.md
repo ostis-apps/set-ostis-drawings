@@ -16,5 +16,8 @@ sudo npm install -g grunt-cli
 
 ```sh
 cd set-ostis-drawings
+npm install
 grunt build
 ```
+
+npm install used once
