@@ -14,56 +14,48 @@ var setViewerWindow = function(sandbox) {
     this.sandbox = sandbox;
     this.sandbox.container = sandbox.container;
 
-    $('#' + sandbox.container).load('static/components/html/set-main-page.html');
+    $('#' + sandbox.container).prepend('<div class="inputBox" id="set-tools-' + sandbox.container + '"></div>');
+    $('#set-tools-' + sandbox.container).load('static/components/html/set-main-page.html', function() {
+
+
+        var inputSet = '#set-tools-' + sandbox.container + " #set-input"
+        var buttonSave = '#set-tools-' + sandbox.container + " #button-load-set";
+        var example = '#set-tools-' + sandbox.container + " #set-example";
+
+        var keynodes = ['ui_set_load_in_memory', 'ui_set_example'];
+
+        SCWeb.core.Server.resolveScAddr(keynodes, function (keynodes) {
+            SCWeb.core.Server.resolveIdentifiers(keynodes, function (idf) {
+                var buttonLoad = idf[keynodes['ui_set_load_in_memory']];
+                var exampleText = idf[keynodes['ui_set_example']];
+
+                $(buttonSave).html(buttonLoad);
+                $(example).html(exampleText);
+
+                $(buttonSave).click(function() {
+                    var setString = $(inputSet).val();
+
+                    if (isValidUserString(setString)) {
+                        callGenSet(getUserSet(setString));
+                    }
+                });
+            });
+        });
+    });
+
 };
 
 SCWeb.core.ComponentManager.appendComponentInitialize(SetComponent);
 
-
-
-SCWeb.ui.SearchPanel = {
-    
-    init: function() {
-        var dfd = new jQuery.Deferred();
-        var self = this;
-
-        var keynode_nrel_main_idtf = null;
-        var keynode_nrel_idtf = null;
-        var keynode_nrel_system_idtf = null;
-
-        $('.typeaheadSet').typeahead({
-                minLength: 3,
-                highlight: true,
-            },
-            {
-                name: 'idtf',
-                source: function(query, cb) {
-                    var inputSet = getElementsOfTheUserSet(query);
-                    callGenSet(inputSet);              
-                },
-               
-        });
-
-        return dfd.promise();
-    },
-    
-};
-
-
-
-function getElementsOfTheUserSet(userString){
-    //Проверка корректности ввода множества
+function getUserSet(userString){
     if (isValidUserString(userString) != 1) 
-        return;
-    //Юникод символа пустого множества
+        return "Incorrect input!";
     const emptySetSymbol = '\u00D8';
-    //удаляем все пробелы в пользовательской строке
     userString = userString.replace(/\s+/g, '');
     var currentUserSet = {
         nameOfTheSet: getNameOfTheSet(userString),
         elementsOfTheSet: []
     };
-    //удаление открывающих и закрывающих скобок множества
     userString = deleteUslessSymbols(userString); 
         for(var i = 0; i < userString.length; i++){
             if(userString[i] == '{') {
@@ -80,11 +72,9 @@ function getElementsOfTheUserSet(userString){
                 }
             }
         }
-    //провека на наличие символа пустого множества во множестве
-    if(userString.indexOf(emptySetSymbol) != -1)
+    if(userString.indexOf(emptySetSymbol) != -1) 
         currentUserSet.elementsOfTheSet.push(userString.match(emptySetSymbol).join(''));
     currentUserSet.elementsOfTheSet = addSimpleElementsToTheSet(userString, currentUserSet.elementsOfTheSet);
-    //проверка, я вляется ли множество, введённое пользователем канторовским множеством
     var uniqueElementsOfTheSet = currentUserSet.elementsOfTheSet.filter(
         (value, input, set) => set.indexOf(value) === input);
     if(currentUserSet.elementsOfTheSet.length > uniqueElementsOfTheSet.length)
@@ -92,26 +82,21 @@ function getElementsOfTheUserSet(userString){
     return currentUserSet;
 }
 
-//получение имени множества
 function getNameOfTheSet(userString) {
     for (var i = 0; i < userString.length; i++)
         if(userString[i] == '=') 
             return userString.substring(0,i);
 }
 
-//удаление мусора из строки и {}
 function deleteUslessSymbols(userString) {
     var indexOfEqual = userString.indexOf('=');
         return userString.slice(indexOfEqual + 1, userString.length).replace(/{/,'').slice(0, -1);
 }
 
-//добавление во множество обычнх элементов
 function addSimpleElementsToTheSet(userString, elementsOfTheSet) {
-    //удаляем элементы, которые уже добавлены во множество
     for(var i = 0; i < elementsOfTheSet.length; i++){
         userString = userString.replace(elementsOfTheSet[i], '');
     }
-    //добавляем все оставшиеся элементы во множество
     var validElements = userString.match(/(\w+)/g);
     for (var elemnts in validElements) {
         elementsOfTheSet.push(validElements[elemnts]);
@@ -119,7 +104,6 @@ function addSimpleElementsToTheSet(userString, elementsOfTheSet) {
     return elementsOfTheSet;
 }
 
-//проверка коректности ввода
 function isValidUserString(userString){
     var indexOfEqual = userString.indexOf('=');
     if (indexOfEqual > userString.indexOf('{') || 
@@ -141,4 +125,55 @@ function isValidUserString(userString){
     if (numberOfOpeningBrackets != numberOfClosingBrackets)
         return false;
     return true;
+}
+
+
+function setGeneration(vertex, elements){
+
+    SCWeb.core.Server.resolveScAddr(['nrel_system_identifier','set','element_of_set'], function (keynodes) {
+
+        var nrelSysId = keynodes['nrel_system_identifier'];
+        var conceptSet = keynodes['set'];
+        var conceptElement = keynodes['element_of_set'];
+
+        window.sctpClient.create_node(sc_type_const).done(function (setNode) {
+
+            window.sctpClient.create_link().done(function (linkId) {
+                window.sctpClient.set_link_content(linkId, vertex);
+                window.sctpClient.create_arc(sc_type_const, setNode, linkId).done(function (commonArc) {
+                    window.sctpClient.create_arc(sc_type_arc_pos_const_perm, nrelSysId, commonArc);
+
+                    window.sctpClient.create_arc(sc_type_arc_pos_const_perm, conceptSet, setNode);
+
+                    elements.forEach(function (element){
+                        window.sctpClient.create_node(sc_type_const).done(function (el) {
+                            window.sctpClient.create_arc(sc_type_arc_pos_const_perm, setNode, el);
+                            window.sctpClient.create_link().done(function (linkEl) {
+                                window.sctpClient.set_link_content(linkEl, element);
+                                window.sctpClient.create_arc(sc_type_const, el, linkEl).done(function (commonArc) {
+                                    window.sctpClient.create_arc(sc_type_arc_pos_const_perm, nrelSysId, commonArc);
+                                    window.sctpClient.create_arc(sc_type_arc_pos_const_perm, conceptElement, el);
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+
+            SCWeb.core.Main.doDefaultCommand([setNode]);
+        });
+    });
+}
+
+
+function callGenSet(userSet){
+
+    var vertex = userSet.nameOfTheSet;
+    var elements = [];
+
+    for(var element in userSet.elementsOfTheSet){
+        elements.push(userSet.elementsOfTheSet[element]);
+    }
+
+    setGeneration(vertex, elements);
 }
