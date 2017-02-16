@@ -16,12 +16,12 @@ format_set_json
 
 set_code <- ui_external_languages;
 => nrel_main_idtf: 
-	[Компонент множеств] 
+	[Создание множеств] 
 	(* 
 	<- lang_ru;;
 	 *);
 => nrel_main_idtf: 
-	[Set theory component] 
+	[Set creater] 
 	(* 
 	<- lang_en;;
 	*);;
