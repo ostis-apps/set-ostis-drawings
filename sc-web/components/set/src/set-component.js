@@ -14,16 +14,14 @@ var setViewerWindow = function(sandbox) {
     this.sandbox = sandbox;
     this.sandbox.container = sandbox.container;
 
+    var inputSet = '#set-tools-' + sandbox.container + " #set-input"
+    var buttonSave = '#set-tools-' + sandbox.container + " #button-load-set";
+    var example = '#set-tools-' + sandbox.container + " #set-example";
+
+    var keynodes = ['ui_set_load_in_memory', 'ui_set_example'];
+
     $('#' + sandbox.container).prepend('<div class="inputBox" id="set-tools-' + sandbox.container + '"></div>');
     $('#set-tools-' + sandbox.container).load('static/components/html/set-main-page.html', function() {
-
-
-        var inputSet = '#set-tools-' + sandbox.container + " #set-input"
-        var buttonSave = '#set-tools-' + sandbox.container + " #button-load-set";
-        var example = '#set-tools-' + sandbox.container + " #set-example";
-
-        var keynodes = ['ui_set_load_in_memory', 'ui_set_example'];
-
         SCWeb.core.Server.resolveScAddr(keynodes, function (keynodes) {
             SCWeb.core.Server.resolveIdentifiers(keynodes, function (idf) {
                 var buttonLoad = idf[keynodes['ui_set_load_in_memory']];
@@ -42,6 +40,19 @@ var setViewerWindow = function(sandbox) {
             });
         });
     });
+
+    this.applyTranslation = function(namesMap) {
+        SCWeb.core.Server.resolveScAddr(keynodes, function (keynodes) {
+            SCWeb.core.Server.resolveIdentifiers(keynodes, function (idf) {
+                var buttonLoad = idf[keynodes['ui_set_load_in_memory']];
+                var exampleText = idf[keynodes['ui_set_example']];
+
+                $(buttonSave).html(buttonLoad);
+                $(example).html(exampleText);
+            });
+        });
+    };
+    this.sandbox.eventApplyTranslation = $.proxy(this.applyTranslation, this);
 
 };
 
