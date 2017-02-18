@@ -52,15 +52,19 @@ module.exports = function() {
             },
             setIMG: {
                 files: [components + 'static/components/images/**'],
-                tasks: ['copy:setIMG'],
+                tasks: ['copy:setIMG']
             },
             setCSS: {
                 files: [components + 'static/components/css/**'],
-                tasks: ['copy:setCSS'],
+                tasks: ['copy:setCSS']
             },
             setHTML: {
                 files: [components + 'static/components/html/**',],
-                tasks: ['copy:setHTML'],
+                tasks: ['copy:setHTML']
+            },
+            copyKB: {
+                files: [kb + '**',],
+                tasks: ['copy:kb']
             }
         },
         exec: {
